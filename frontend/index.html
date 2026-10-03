@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Analytics Portal</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN for Graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Enable class-based dark mode strategy in Tailwind
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased min-h-screen transition-colors duration-200">
+
+    <!-- Notification Banner -->
+    <div id="alertBanner" class="hidden fixed top-5 right-5 z-50 bg-purple-600 text-white px-4 py-3 rounded-xl shadow-2xl text-sm font-medium transition-all"></div>
+
+    <!-- Auth Section (Login / Signup) -->
+    <div id="authSection" class="flex items-center justify-center min-h-screen p-4">
+        <div class="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 p-8 rounded-3xl shadow-2xl w-full max-w-md space-y-6">
+            <div class="text-center space-y-2">
+                <h1 id="authTitle" class="text-2xl font-bold text-purple-600 dark:text-purple-400">Welcome Back</h1>
+                <p id="authSubtitle" class="text-xs text-slate-500 dark:text-slate-400">Please login to access your student portal</p>
+            </div>
+
+            <form onsubmit="handleAuth(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Email Address</label>
+                    <input type="email" id="emailInput" required class="w-full bg-slate-100 dark:bg-slate-950/60 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-purple-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Password</label>
+                    <input type="password" id="passwordInput" required class="w-full bg-slate-100 dark:bg-slate-950/60 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-purple-500">
+                </div>
+
+                <!-- Signup Extra Fields Container -->
+                <div id="signupDetailsContainer" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Full Name</label>
+                        <input type="text" id="fullNameInput" class="w-full bg-slate-100 dark:bg-slate-950/60 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Phone Number</label>
+                        <input type="text" id="phoneInput" class="w-full bg-slate-100 dark:bg-slate-950/60 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Course / Degree</label>
+                        <input type="text" id="courseInput" placeholder="e.g. Bachelor of Computer Applications" class="w-full bg-slate-100 dark:bg-slate-950/60 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-purple-500">
+                    </div>
+                </div>
+
+                <!-- OTP Field Container -->
+                <div id="otpFieldContainer" class="hidden">
+                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Enter Verification OTP</label>
+                    <input type="text" id="otpInput" class="w-full bg-slate-100 dark:bg-slate-950/60 border border-purple-500 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-200 focus:outline-none">
+                </div>
+
+                <button type="submit" id="authBtn" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-medium py-3 rounded-xl shadow-lg shadow-purple-600/25 transition">
+                    Login
+                </button>
+            </form>
+
+            <div class="text-center text-xs text-slate-500 dark:text-slate-400">
+                <span id="toggleText">Don't have an account? <button type="button" onclick="toggleAuthMode()" class="text-purple-600 dark:text-purple-400 hover:underline font-medium">Create account</button></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Portal Section (Hidden by default until login) -->
+    <div id="portalSection" class="hidden flex h-screen overflow-hidden relative">
+        
+        <!-- Mobile Overlay / Backdrop -->
+        <div id="mobileNavOverlay" onclick="toggleMobileNav()" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-30 md:hidden"></div>
+
+        <!-- Sidebar Navigation (Responsive: Hidden on Mobile by default, toggled via state) -->
+        <aside id="sidebarNav" class="w-64 backdrop-blur-xl bg-white/90 dark:bg-slate-900/95 border-r border-slate-200 dark:border-slate-800/80 p-4 flex flex-col justify-between absolute md:relative inset-y-0 left-0 z-40 transform -translate-x-full md:translate-x-0 transition-transform duration-300">
+            <div class="space-y-6">
+                <div class="flex items-center justify-between px-2">
+                    <div class="flex items-center gap-3">
+                        <div id="userAvatarContainer" class="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/30 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-lg overflow-hidden">
+                            <span id="userAvatarLetter">S</span>
+                        </div>
+                        <div>
+                            <h2 id="profileDisplayName" class="text-sm font-bold text-slate-800 dark:text-slate-200">Student Name</h2>
+                            <span id="profileDegreeBadge" class="text-[10px] text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-full border border-purple-500/20">Course</span>
+                        </div>
+                    </div>
+                    <!-- Close button for mobile sidebar -->
+                    <button onclick="toggleMobileNav()" class="md:hidden text-slate-400 hover:text-slate-100 text-lg font-bold">✕</button>
+                </div>
+
+                <nav class="space-y-1.5 overflow-y-auto max-h-[calc(100vh-200px)]">
+                    <button onclick="switchTab('dashboard'); toggleMobileNav();" id="nav-dashboard" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-purple-600/20 text-purple-600 dark:text-purple-400 font-medium border border-purple-500/30 transition">📊 Dashboard</button>
+                    <button onclick="switchTab('performance'); toggleMobileNav();" id="nav-performance" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">📈 Performance</button>
+                    <button onclick="switchTab('attendance'); toggleMobileNav();" id="nav-attendance" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">📅 Attendance</button>
+                    <button onclick="switchTab('subjects'); toggleMobileNav();" id="nav-subjects" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">📚 AI Subjects</button>
+                    <button onclick="switchTab('tasks'); toggleMobileNav();" id="nav-tasks" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">📌 Tasks</button>
+                    <button onclick="switchTab('goals'); toggleMobileNav();" id="nav-goals" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">🎯 Goals</button>
+                    <button onclick="switchTab('routine'); toggleMobileNav();" id="nav-routine" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">⏰ Routine</button>
+                    <button onclick="switchTab('gemini'); toggleMobileNav();" id="nav-gemini" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">✨ Gemini</button>
+                    <button onclick="switchTab('settings'); toggleMobileNav();" id="nav-settings" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition">⚙️ Settings</button>
+                </nav>
+            </div>
+
+            <div class="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                <button onclick="toggleDarkMode()" class="w-full flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 py-2 rounded-xl text-xs font-medium transition">🌙 Toggle Theme</button>
+                <button onclick="logout()" class="w-full flex items-center justify-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 py-2 rounded-xl text-xs font-medium transition">🚪 Logout</button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50 dark:bg-slate-950 w-full">
+            <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                
+                <div class="flex items-center gap-3 w-full md:w-auto justify-between">
+                    <!-- Hamburger / Mobile Navigation Menu Button -->
+                    <button onclick="toggleMobileNav()" class="md:hidden bg-purple-600 text-white p-2.5 rounded-xl shadow-lg flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <h1 id="welcomeUser" class="text-lg md:text-xl font-bold text-slate-800 dark:text-slate-200">Welcome back, Student</h1>
+                </div>
+
+                <div class="backdrop-blur-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-lg w-full md:w-fit space-y-3">
+                    <!-- Header -->
+                    <div class="flex items-center justify-between text-xs font-semibold text-purple-600 dark:text-purple-400">
+                        <span>🌍 World Clock</span>
+                        <span class="text-[10px] text-slate-400">Select Country</span>
+                    </div>
+
+                    <!-- Dropdown aur Number Clock ka Container -->
+                    <div class="flex items-center gap-4">
+                        <!-- Country Dropdown -->
+                        <select id="countrySelect" onchange="updateWorldClock()" class="bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs rounded-xl px-3 py-2 outline-none focus:border-purple-500 transition">
+                            <option value="Asia/Kolkata">🇮🇳 India (IST)</option>
+                            <option value="America/New_York">🇺🇸 USA (New York)</option>
+                            <option value="Europe/London">🇬🇧 UK (London)</option>
+                            <option value="Asia/Tokyo">🇯🇵 Japan (Tokyo)</option>
+                            <option value="Australia/Sydney">🇦🇺 Australia (Sydney)</option>
+                            <option value="Asia/Dubai">🇦🇪 UAE (Dubai)</option>
+                            <option value="Europe/Paris">🇫🇷 France (Paris)</option>
+                            <option value="Canada/Eastern">🇨🇦 Canada (Toronto)</option>
+                        </select>
+
+                        <!-- Number Clock -->
+                        <div class="flex flex-col bg-slate-950/40 border border-purple-500/20 px-4 py-2 rounded-xl shadow-inner">
+                            <div id="worldClockTime" class="text-lg font-extrabold text-slate-100 tracking-wider">09:15:00 PM</div>
+                            <div id="worldClockDate" class="text-[10px] text-purple-400 font-medium">Fri, Sep 25, 2026</div>
+                        </div>
+                    </div>
+                </div>
+                <span class="hidden md:inline-block text-xs text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-xl">Active Session</span>
+            </header>
+
+            <!-- Dashboard View -->
+            <div id="view-dashboard" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="backdrop-blur-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xl">
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Total Tasks</p>
+                        <h3 id="dashTasksCount" class="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-2">0</h3>
+                    </div>
+                    <div class="backdrop-blur-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xl">
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Active Goals</p>
+                        <h3 id="dashGoalsCount" class="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-2">0</h3>
+                    </div>
+                    <div class="backdrop-blur-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xl">
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Attendance Rate</p>
+                        <h3 id="dashAttendance" class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">0%</h3>
+                    </div>
+                    <div class="backdrop-blur-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xl space-y-4 text-center md:col-span-3">
+                        <h3 class="text-sm font-bold text-purple-600 dark:text-purple-400">⏱️ Study Timer (Pomodoro)</h3>
+                        
+                        <!-- Timer Display -->
+                        <div id="timerDisplay" class="text-4xl font-extrabold text-slate-800 dark:text-slate-100 tracking-wider my-4">
+                            25:00
+                        </div>
+
+                        <!-- Timer Controls -->
+                        <div class="flex justify-center gap-3">
+                            <button onclick="startTimer()" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-xs font-medium transition shadow-md shadow-purple-600/20">
+                                Start
+                            </button>
+                            <button onclick="pauseTimer()" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/20 px-4 py-2 rounded-xl text-xs font-medium transition">
+                                Pause
+                            </button>
+                            <button onclick="resetTimer()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 border border-rose-500/20 px-4 py-2 rounded-xl text-xs font-medium transition">
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance View -->
+            <div id="view-performance" class="hidden space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800 dark:text-slate-200">Performance Analytics</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Track your semester scores, progress trends, and evaluation metrics.</p>
+                    </div>
+                    <span class="text-xs bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 px-3 py-1.5 rounded-xl font-medium">Semester Active</span>
+                </div>
+
+                <!-- Custom Performance Entry Form -->
+                <div class="backdrop-blur-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl space-y-4">
+                    <h3 class="text-sm font-bold text-purple-600 dark:text-purple-400">➕ Add Custom Performance Record</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">Exam / Subject Name</label>
+                            <input type="text" id="perfMonthInput" placeholder="e.g., Python Exam" class="w-full bg-slate-100 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">Score / Percentage (%)</label>
+                            <input type="number" id="perfScoreInput" placeholder="e.g., 85" min="0" max="100" class="w-full bg-slate-100 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="addCustomPerformance()" class="w-full bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition shadow-lg shadow-purple-600/20">Add Performance Record</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="performanceLogsList" class="space-y-2">
+                    <p class="text-slate-400 text-xs text-center py-2">No performance records added yet.</p>
+                </div>
+
+                <div class="backdrop-blur-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200">Monthly Academic Progress Trend</h3>
+                        <div class="flex gap-2">
+                            <button onclick="updateChartType('line')" class="text-xs bg-purple-600 text-white px-3 py-1 rounded-lg">Line</button>
+                            <button onclick="updateChartType('bar')" class="text-xs bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 px-3 py-1 rounded-lg">Bar</button>
+                        </div>
+                    </div>
+                    <div class="h-72 w-full"><canvas id="performanceChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Tasks View -->
+            <div id="view-tasks" class="hidden space-y-6">
+                <h2 class="text-lg font-bold text-slate-800 dark:text-slate-200">Task Management</h2>
+                <div class="flex flex-col md:flex-row gap-3">
+                    <input type="text" id="newTaskInput" placeholder="Add a new task..." class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:border-purple-500">
+                    <button onclick="addTask()" class="bg-purple-600 hover:bg-purple-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition">Add Task</button>
+                </div>
+                <div id="tasksList" class="space-y-3"><p class="text-xs text-slate-500 text-center py-4">No tasks added yet.</p></div>
+            </div>
+
+            <!-- Goals View -->
+            <div id="view-goals" class="hidden space-y-6">
+                <h2 class="text-lg font-bold text-slate-800 dark:text-slate-200">Goal Tracking</h2>
+                <div class="flex flex-col md:flex-row gap-3">
+                    <input type="text" id="newGoalInput" placeholder="Add a new goal..." class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:border-purple-500">
+                    <button onclick="addGoal()" class="bg-purple-600 hover:bg-purple-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition">Add Goal</button>
+                    <button onclick="resetGoals()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 border border-rose-500/20 px-4 py-2.5 rounded-xl text-sm font-medium transition">Reset</button>
+                </div>
+                <div id="goalsList" class="space-y-3"><p class="text-xs text-slate-500 text-center py-4">No goals added yet.</p></div>
+            </div>
+
+            <!-- AI Subjects View -->
+            <div id="view-subjects" class="hidden space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800 dark:text-slate-200">AI Curriculum & Syllabus Engine</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Generate structured academic modules, learning paths, and topic breakdowns instantly.</p>
+                    </div>
+                    <span class="text-xs bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 px-3 py-1.5 rounded-xl font-medium">✨ Gemini AI Model Active</span>
+                </div>
+                <div class="backdrop-blur-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl space-y-4">
+                    <div class="flex flex-col md:flex-row gap-3">
+                        <div class="relative flex-1">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-purple-600 dark:text-purple-400 font-bold">✨</span>
+                            <input type="text" id="aiSubjectInput" placeholder="Enter course name (e.g., BCA, Data Science, Python)..." class="w-full bg-slate-100 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-purple-500">
+                        </div>
+                        <button onclick="generateSubjectsByAI()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-6 py-3 rounded-xl text-sm font-medium transition shadow-lg shadow-purple-600/20">Generate Syllabus</button>
+                    </div>
+                </div>
+                <div id="aiSyllabusContainer" class="space-y-4"></div>
+            </div>
+
+            <!-- Attendance View -->
+            <div id="view-attendance" class="hidden space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800 dark:text-slate-200">Attendance Tracker</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Monitor your daily presence status and monthly attendance analytics.</p>
+                    </div>
+                    <button onclick="markAttendance()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-lg shadow-emerald-600/20">Mark Present Today</button>
+                </div>
+
+                <div class="backdrop-blur-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl space-y-4">
+                    <h3 class="text-sm font-bold text-emerald-600 dark:text-emerald-400">➕ Add Custom Attendance Record</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">Date / Session Name</label>
+                            <input type="text" id="attDateInput" placeholder="e.g., 24 Sept or Lab Class" class="w-full bg-slate-100 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">Status</label>
+                            <select id="attStatusInput" class="w-full bg-slate-100 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <option value="Present">Present</option>
+                                <option value="Absent">Absent</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="addCustomAttendance()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition shadow-lg shadow-emerald-600/20">Add Attendance</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="backdrop-blur-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl">
+                        <span class="text-xs text-slate-500 dark:text-slate-400">Total Classes</span>
+                        <h3 id="statTotalClasses" class="text-3xl font-bold text-slate-800 dark:text-slate-100 mt-2">0</h3>
+                    </div>
+                    <div class="backdrop-blur-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl">
+                        <span class="text-xs text-slate-500 dark:text-slate-400">Classes Attended</span>
+                        <h3 id="statPresentClasses" class="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mt-2">0</h3>
+                    </div>
+                    <div class="backdrop-blur-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl">
+                        <span class="text-xs text-slate-500 dark:text-slate-400">Overall Rate</span>
+                        <h3 id="attendancePercentBadge" class="text-3xl font-bold text-purple-600 dark:text-purple-400 mt-2">0%</h3>
+                    </div>
+                </div>
+
+                <div class="backdrop-blur-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200">Monthly Attendance Trends (%)</h3>
+                        <span class="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 font-medium">Safe Zone (&gt;75%)</span>
+                    </div>
+                    <div class="h-72 w-full"><canvas id="attendanceChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Routine Section -->
+            <div id="view-routine" class="hidden space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800 dark:text-slate-200">Daily Study Routine & Schedule</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Plan your routine items with specific dates and tick them off once completed.</p>
+                    </div>
+                    <span class="text-xs bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 px-3 py-1.5 rounded-xl font-medium">Planner Active</span>
+                </div>
+                <div class="backdrop-blur-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-xl space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="md:col-span-2">
+                            <label class="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">Routine Activity / Task</label>
+                            <input type="text" id="routineTitleInput" placeholder="e.g., Study Python FastAPI..." class="w-full bg-slate-100 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">Target Date</label>
+                            <input type="date" id="routineDateInput" class="w-full bg-slate-100 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-purple-500">
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button onclick="addRoutineItem()" class="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition shadow-lg shadow-purple-600/20">Add Routine Task</button>
+                    </div>
+                </div>
+                <div id="routineListContainer" class="space-y-3">
+                    <div class="backdrop-blur-md bg-white/40 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/60 border-dashed p-8 rounded-2xl text-center space-y-2">
+                        <div class="w-10 h-10 bg-purple-600/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 rounded-xl mx-auto flex items-center justify-center font-bold">⏰</div>
+                        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">No Routine Tasks Added</h3>
+                        <p class="text-xs text-slate-500">Add your tasks above with target dates to start tracking.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View: Gemini AI Assistant -->
+            <div id="view-gemini" class="hidden flex flex-col md:flex-row h-[calc(100vh-100px)] bg-slate-900 text-slate-100 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl">
+                <!-- Left Sidebar: Chat History / Sessions -->
+                <div class="w-full md:w-64 bg-slate-950/60 border-r border-slate-800 flex flex-col justify-between p-4 hidden md:flex">
+                    <div class="space-y-4">
+                        <button onclick="startNewGeminiChat()" class="w-full flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 rounded-xl text-xs font-medium transition shadow-lg shadow-purple-600/20">
+                            <span>➕</span> New Chat
+                        </button>
+                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1">Recent Chats</div>
+                        <div id="chatHistoryList" class="space-y-1 overflow-y-auto max-h-[calc(100vh-250px)]">
+                            <div class="px-3 py-2 rounded-xl bg-slate-800/60 text-xs text-slate-200 cursor-pointer">Current Session</div>
+                        </div>
+                    </div>
+                    <div class="text-[10px] text-slate-500 px-1">Powered by Gemini 1.5 Flash</div>
+                </div>
+
+                <!-- Right Main Chat Area -->
+                <div class="flex-1 flex flex-col justify-between bg-slate-900">
+                    <!-- Chat Header -->
+                    <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
+                        <div class="flex items-center gap-2 text-sm font-bold text-slate-200">
+                            <span class="text-purple-400">✨</span> Gemini AI Assistant
+                        </div>
+                        <span class="text-xs text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">Online</span>
+                    </div>
+
+                    <!-- Chat Messages Container -->
+                    <div id="geminiChatContainer" class="flex-1 p-6 overflow-y-auto space-y-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-full bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 font-bold text-xs shrink-0">AI</div>
+                            <div class="bg-slate-800/80 border border-slate-700/60 text-slate-200 p-4 rounded-2xl max-w-xl text-sm shadow-md">
+                                Hello Wasim Akram! I’m Gemini. You can talk to me about studies, coding, or any other topic. Tell me, how can I help you today?
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Input Form -->
+                    <div class="p-4 border-t border-slate-800 bg-slate-950/40">
+                        <div class="flex gap-3 max-w-4xl mx-auto">
+                            <input type="text" id="geminiPromptInput" placeholder="Ask anything..." class="flex-1 bg-slate-950 border border-slate-700 rounded-2xl px-4 py-3 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 transition" onkeypress="if(event.key === 'Enter')sendGeminiMessage()">
+                            <button onclick="sendGeminiMessage()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-6 py-3 rounded-2xl text-sm font-medium transition shadow-lg shadow-purple-600/25 flex items-center gap-2">
+                                <span>Send</span> 🚀
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="view-settings" class="hidden space-y-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800 dark:text-slate-200">Portal Settings & Profile Customization</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Update your profile details, upload/reset profile photo, and manage preferences.</p>
+                    </div>
+                </div>
+
+                <div class="backdrop-blur-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
+                    <h3 class="text-sm font-bold text-purple-600 dark:text-purple-400 border-b border-slate-200 dark:border-slate-800 pb-3">👤 Edit Profile Information</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Display Name</label>
+                            <input type="text" id="settingsNameInput" class="w-full bg-slate-100 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Course / Degree Badge</label>
+                            <input type="text" id="settingsCourseInput" class="w-full bg-slate-100 dark:bg-slate-950/80 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-purple-500">
+                        </div>
+                    </div>
+
+                    <!-- Profile Photo Upload & Reset Section -->
+                    <div class="space-y-2 pt-2">
+                        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400">Profile Photo / Avatar</label>
+                        <div class="flex flex-wrap items-center gap-4">
+                            <input type="file" id="profilePhotoInput" accept="image/*" onchange="previewProfilePhoto(event)" class="hidden">
+                            <button type="button" onclick="document.getElementById('profilePhotoInput').click()" class="bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 px-4 py-2.5 rounded-xl text-xs font-medium transition border border-slate-300 dark:border-slate-700">
+                                📷 Upload New Photo
+                            </button>
+                            <button type="button" onclick="resetProfilePhoto()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 px-4 py-2.5 rounded-xl text-xs font-medium transition border border-rose-500/20">
+                                🔄 Reset Photo
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-800">
+                        <button onclick="saveProfileSettings()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-6 py-2.5 rounded-xl text-sm font-medium transition shadow-lg shadow-purple-600/20">
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+
+                <div class="backdrop-blur-md bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xl space-y-4">
+                    <h3 class="text-sm font-bold text-rose-500 dark:text-rose-400">Danger Zone</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Permanently delete your account and clear all local portal session records.</p>
+                    <button onclick="deleteAccount()" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 border border-rose-500/20 px-5 py-2.5 rounded-xl text-sm font-medium transition">Delete Account</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Script for Toggling Mobile Navigation -->
+    <script>
+        function toggleMobileNav() {
+            const sidebar = document.getElementById('sidebarNav');
+            const overlay = document.getElementById('mobileNavOverlay');
+            if (sidebar && overlay) {
+                sidebar.classList.toggle('-translate-x-full');
+                overlay.classList.toggle('hidden');
+            }
+        }
+    </script>
+    <script src="script.js"></script>
+</body>
+</html>
