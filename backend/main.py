@@ -10,7 +10,7 @@ from typing import Optional
 import google.generativeai as genai
 
 # Import professional email utility function
-from email_utils import send_otp_email
+from .email_utils import send_otp_email
 
 # Database Configuration (MySQL)
 DATABASE_URL = "mysql+pymysql://root:6248@127.0.0.1:3306/student_analytics"
